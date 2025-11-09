@@ -1,5 +1,0 @@
-antlr = ../code/0
-
-result = antlr.parse({ input: "grammar Test;" })
-
-result.success

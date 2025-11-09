@@ -1,9 +1,0 @@
-antlr = ../code/0
-unitest = unitest.0
-
-// Test 1: Parse a simple grammar declaration
-test_input = "grammar Test;"
-
-result1 = antlr.parse({ input: test_input })
-
-result1
