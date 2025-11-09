@@ -1,0 +1,27 @@
+// Example: Generating ANTLR grammar from AST
+antlr = ../code/0
+
+// Create an AST for a simple grammar (just declaration, no rules)
+ast = {
+  ws_start: ""
+  grammar_decl: {
+    keyword: "grammar"
+    ws1: " "
+    name: "TokenGrammar"
+    ws2: ""
+    semicolon: ";"
+  }
+  rules: []
+  ws_end: ""
+}
+
+// Generate ANTLR grammar text
+result = antlr.generate({ ast: ast })
+
+// Display the result
+result.success == 1 ? {
+  status: "Successfully generated!"
+  output: result.output
+} : {
+  status: "Generation failed"
+}

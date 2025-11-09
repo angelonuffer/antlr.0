@@ -1,0 +1,24 @@
+// Example: Parsing a simple ANTLR grammar
+antlr = ../code/0
+
+// Define a simple expression grammar
+grammar_text = "grammar SimpleExpr;
+expr: term;
+term: ID;
+ID: [a-zA-Z];"
+
+// Parse the grammar
+result = antlr.parse({ input: grammar_text })
+
+// Display the result
+result.success == 1 ? {
+  status: "Successfully parsed!"
+  grammar_name: result.value.grammar_decl.name
+  number_of_rules: result.value.rules[.]
+  first_rule_name: result.value.rules[0].rule.name
+} : {
+  status: "Parse failed"
+  position: result.pos
+  expected: result.expected
+  found: result.found
+}
