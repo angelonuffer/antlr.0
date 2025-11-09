@@ -1,0 +1,57 @@
+antlr = ../code/0
+unitest = unitest.0
+
+// Test 1: Parse a simple grammar declaration
+test_input = "grammar Test;"
+
+result1 = antlr.parse({ input: test_input })
+
+// Test 2: Parse grammar with whitespace
+test_input2 = "  grammar  MyGrammar  ;  "
+
+result2 = antlr.parse({ input: test_input2 })
+
+// Test 3: Parse and generate round trip
+test_ast = {
+  ws_start: ""
+  grammar_decl: {
+    keyword: "grammar"
+    ws1: " "
+    name: "Example"
+    ws2: ""
+    semicolon: ";"
+  }
+  ws_end: ""
+}
+
+result3 = antlr.generate({ ast: test_ast })
+
+unitest.display(
+  unitest.describe({
+    name: "ANTLR Grammar Parser Tests"
+    tests: [
+      unitest.describe({
+        name: "Parse simple grammar declaration"
+        tests: [
+          unitest.equals([ result1.success 1 ])
+          unitest.equals([ result1.value.grammar_decl.name "Test" ])
+        ]
+      })
+      unitest.describe({
+        name: "Parse grammar with extra whitespace"
+        tests: [
+          unitest.equals([ result2.success 1 ])
+          unitest.equals([ result2.value.grammar_decl.name "MyGrammar" ])
+        ]
+      })
+      unitest.describe({
+        name: "Generate ANTLR grammar from AST"
+        tests: [
+          unitest.equals([ result3.success 1 ])
+          unitest.equals([ result3.output "grammar Example;" ])
+        ]
+      })
+    ]
+  })
+)
+

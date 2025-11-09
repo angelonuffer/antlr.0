@@ -1,0 +1,103 @@
+dialect = https://cdn.jsdelivr.net/gh/angelonuffer/dialect@47f7c367224f7c6571b69c8811ce3d923885555a/code/0
+
+// Basic whitespace
+ws_char = {
+  type: "alternative"
+  options: [
+    { type: "symbol" text: " " }
+    { type: "symbol" text: "\t" }
+    { type: "symbol" text: "\n" }
+    { type: "symbol" text: "\r" }
+  ]
+}
+
+ws = {
+  type: "repetition"
+  grammar: ws_char
+  format: "text"
+  minimum: 1
+}
+
+opt_ws = {
+  type: "repetition"
+  grammar: ws_char
+  format: "text"
+  minimum: 0
+}
+
+// Identifiers
+identifier_start = {
+  type: "alternative"
+  options: [
+    { type: "range" from: "a" to: "z" }
+    { type: "range" from: "A" to: "Z" }
+    { type: "symbol" text: "_" }
+  ]
+}
+
+identifier_char = {
+  type: "alternative"
+  options: [
+    { type: "range" from: "a" to: "z" }
+    { type: "range" from: "A" to: "Z" }
+    { type: "range" from: "0" to: "9" }
+    { type: "symbol" text: "_" }
+  ]
+}
+
+identifier = {
+  type: "sequence"
+  parts: [
+    identifier_start
+    {
+      type: "repetition"
+      grammar: identifier_char
+      format: "text"
+      minimum: 0
+    }
+  ]
+  format: "text"
+}
+
+// Grammar declaration
+grammar_decl = {
+  type: "sequence"
+  parts: [
+    { name: "keyword" grammar: { type: "symbol" text: "grammar" } }
+    { name: "ws1" grammar: ws }
+    { name: "name" grammar: identifier }
+    { name: "ws2" grammar: opt_ws }
+    { name: "semicolon" grammar: { type: "symbol" text: ";" } }
+  ]
+  format: "object"
+}
+
+// Simple grammar for now - just grammar declaration
+antlr_grammar = {
+  type: "sequence"
+  parts: [
+    { name: "ws_start" grammar: opt_ws }
+    { name: "grammar_decl" grammar: grammar_decl }
+    { name: "ws_end" grammar: opt_ws }
+  ]
+  format: "object"
+}
+
+// Parse function
+parse = { input } => dialect.parse({
+  input: input
+  grammar: antlr_grammar
+})
+
+// Generate function
+generate = { ast } => dialect.generate({
+  value: ast
+  grammar: antlr_grammar
+})
+
+// Export API
+{
+  parse: parse
+  generate: generate
+  grammar: antlr_grammar
+}
