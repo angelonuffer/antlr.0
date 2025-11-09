@@ -6,7 +6,8 @@ ws_char = {
   options: [
     { type: "symbol" text: " " }
     { type: "symbol" text: "\t" }
-    { type: "symbol" text: "\n" }
+    { type: "symbol" text: "
+" }
     { type: "symbol" text: "\r" }
   ]
 }
@@ -59,6 +60,197 @@ identifier = {
   format: "text"
 }
 
+// Parser rule name (lowercase start)
+parser_rule_name = {
+  type: "sequence"
+  parts: [
+    { type: "range" from: "a" to: "z" }
+    {
+      type: "repetition"
+      grammar: identifier_char
+      format: "text"
+      minimum: 0
+    }
+  ]
+  format: "text"
+}
+
+// Lexer rule name (uppercase start)
+lexer_rule_name = {
+  type: "sequence"
+  parts: [
+    { type: "range" from: "A" to: "Z" }
+    {
+      type: "repetition"
+      grammar: identifier_char
+      format: "text"
+      minimum: 0
+    }
+  ]
+  format: "text"
+}
+
+// String literals (single quoted)
+string_content_char = {
+  type: "alternative"
+  options: [
+    { type: "symbol" text: "\\'" }
+    { type: "symbol" text: "\\\\" }
+    {
+      type: "range"
+      from: " "
+      to: "&"
+    }
+    {
+      type: "range"
+      from: "("
+      to: "["
+    }
+    {
+      type: "range"
+      from: "]"
+      to: "~"
+    }
+  ]
+}
+
+string_literal = {
+  type: "sequence"
+  parts: [
+    { name: "open" grammar: { type: "symbol" text: "'" } }
+    { name: "content" grammar: {
+      type: "repetition"
+      grammar: string_content_char
+      format: "text"
+      minimum: 0
+    }}
+    { name: "close" grammar: { type: "symbol" text: "'" } }
+  ]
+  format: "object"
+}
+
+// Character class content (supports ranges like a-z)
+// Note: ] is excluded to not be consumed by the repetition
+char_class_item = {
+  type: "alternative"
+  options: [
+    {
+      type: "sequence"
+      parts: [
+        {
+          type: "alternative"
+          options: [
+            { type: "range" from: " " to: "\\" }
+            { type: "range" from: "^" to: "~" }
+          ]
+        }
+        { type: "symbol" text: "-" }
+        {
+          type: "alternative"
+          options: [
+            { type: "range" from: " " to: "\\" }
+            { type: "range" from: "^" to: "~" }
+          ]
+        }
+      ]
+      format: "text"
+    }
+    {
+      type: "alternative"
+      options: [
+        { type: "range" from: " " to: "\\" }
+        { type: "range" from: "^" to: "~" }
+      ]
+    }
+  ]
+}
+
+char_class = {
+  type: "sequence"
+  parts: [
+    { name: "open" grammar: { type: "symbol" text: "[" } }
+    { name: "content" grammar: {
+      type: "repetition"
+      grammar: char_class_item
+      format: "text"
+      minimum: 1
+    }}
+    { name: "close" grammar: { type: "symbol" text: "]" } }
+  ]
+  format: "object"
+}
+
+// Rule element (simplified - identifier, string literal, or char class)
+rule_element = {
+  type: "alternative"
+  options: [
+    string_literal
+    char_class
+    identifier
+  ]
+}
+
+// Rule body - sequence of elements
+rule_body = {
+  type: "sequence"
+  parts: [
+    { name: "first" grammar: rule_element }
+    { name: "rest" grammar: {
+      type: "repetition"
+      grammar: {
+        type: "sequence"
+        parts: [
+          { name: "ws" grammar: ws }
+          { name: "element" grammar: rule_element }
+        ]
+        format: "object"
+      }
+      format: "list"
+      minimum: 0
+    }}
+  ]
+  format: "object"
+}
+
+// Parser rule definition
+parser_rule = {
+  type: "sequence"
+  parts: [
+    { name: "name" grammar: parser_rule_name }
+    { name: "ws1" grammar: opt_ws }
+    { name: "colon" grammar: { type: "symbol" text: ":" } }
+    { name: "ws2" grammar: opt_ws }
+    { name: "body" grammar: rule_body }
+    { name: "ws3" grammar: opt_ws }
+    { name: "semicolon" grammar: { type: "symbol" text: ";" } }
+  ]
+  format: "object"
+}
+
+// Lexer rule definition
+lexer_rule = {
+  type: "sequence"
+  parts: [
+    { name: "name" grammar: lexer_rule_name }
+    { name: "ws1" grammar: opt_ws }
+    { name: "colon" grammar: { type: "symbol" text: ":" } }
+    { name: "ws2" grammar: opt_ws }
+    { name: "body" grammar: rule_body }
+    { name: "ws3" grammar: opt_ws }
+    { name: "semicolon" grammar: { type: "symbol" text: ";" } }
+  ]
+  format: "object"
+}
+
+// Any rule (parser or lexer) - try lexer first
+any_rule = {
+  type: "alternative"
+  options: [
+    lexer_rule
+    parser_rule
+  ]
+}
+
 // Grammar declaration
 grammar_decl = {
   type: "sequence"
@@ -72,12 +264,25 @@ grammar_decl = {
   format: "object"
 }
 
-// Simple grammar for now - just grammar declaration
+// Full grammar with optional rules
 antlr_grammar = {
   type: "sequence"
   parts: [
     { name: "ws_start" grammar: opt_ws }
     { name: "grammar_decl" grammar: grammar_decl }
+    { name: "rules" grammar: {
+      type: "repetition"
+      grammar: {
+        type: "sequence"
+        parts: [
+          { name: "ws" grammar: opt_ws }
+          { name: "rule" grammar: any_rule }
+        ]
+        format: "object"
+      }
+      format: "list"
+      minimum: 0
+    }}
     { name: "ws_end" grammar: opt_ws }
   ]
   format: "object"

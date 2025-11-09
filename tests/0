@@ -11,7 +11,26 @@ test_input2 = "  grammar  MyGrammar  ;  "
 
 result2 = antlr.parse({ input: test_input2 })
 
-// Test 3: Parse and generate round trip
+// Test 3: Parse grammar with a parser rule
+test_input3 = "grammar Expr;
+expr: 'hello' 'world';"
+
+result3 = antlr.parse({ input: test_input3 })
+
+// Test 4: Parse grammar with a lexer rule
+test_input4 = "grammar Tokens;
+ID: [a-z];"
+
+result4 = antlr.parse({ input: test_input4 })
+
+// Test 5: Parse grammar with both parser and lexer rules
+test_input5 = "grammar Simple;
+prog: ID;
+ID: [a-z];"
+
+result5 = antlr.parse({ input: test_input5 })
+
+// Test 6: Generate ANTLR grammar from AST (just declaration)
 test_ast = {
   ws_start: ""
   grammar_decl: {
@@ -21,10 +40,11 @@ test_ast = {
     ws2: ""
     semicolon: ";"
   }
+  rules: []
   ws_end: ""
 }
 
-result3 = antlr.generate({ ast: test_ast })
+result6 = antlr.generate({ ast: test_ast })
 
 unitest.display(
   unitest.describe({
@@ -34,21 +54,45 @@ unitest.display(
         name: "Parse simple grammar declaration"
         tests: [
           unitest.equals([ result1.success 1 ])
-          unitest.equals([ result1.value.grammar_decl.name "Test" ])
+          unitest.equals([ (result1.success == 1 ? result1.value.grammar_decl.name : "N/A") "Test" ])
         ]
       })
       unitest.describe({
         name: "Parse grammar with extra whitespace"
         tests: [
           unitest.equals([ result2.success 1 ])
-          unitest.equals([ result2.value.grammar_decl.name "MyGrammar" ])
+          unitest.equals([ (result2.success == 1 ? result2.value.grammar_decl.name : "N/A") "MyGrammar" ])
+        ]
+      })
+      unitest.describe({
+        name: "Parse grammar with parser rule"
+        tests: [
+          unitest.equals([ result3.success 1 ])
+          unitest.equals([ (result3.success == 1 ? result3.value.grammar_decl.name : "N/A") "Expr" ])
+          unitest.equals([ (result3.success == 1 ? result3.value.rules[.] : 0) 1 ])
+        ]
+      })
+      unitest.describe({
+        name: "Parse grammar with lexer rule"
+        tests: [
+          unitest.equals([ result4.success 1 ])
+          unitest.equals([ (result4.success == 1 ? result4.value.grammar_decl.name : "N/A") "Tokens" ])
+          unitest.equals([ (result4.success == 1 ? result4.value.rules[.] : 0) 1 ])
+        ]
+      })
+      unitest.describe({
+        name: "Parse grammar with both rule types"
+        tests: [
+          unitest.equals([ result5.success 1 ])
+          unitest.equals([ (result5.success == 1 ? result5.value.grammar_decl.name : "N/A") "Simple" ])
+          unitest.equals([ (result5.success == 1 ? result5.value.rules[.] : 0) 2 ])
         ]
       })
       unitest.describe({
         name: "Generate ANTLR grammar from AST"
         tests: [
-          unitest.equals([ result3.success 1 ])
-          unitest.equals([ result3.output "grammar Example;" ])
+          unitest.equals([ result6.success 1 ])
+          unitest.equals([ (result6.success == 1 ? result6.output : "N/A") "grammar Example;" ])
         ]
       })
     ]
