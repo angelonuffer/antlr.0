@@ -1,4 +1,4 @@
-dialect = https://cdn.jsdelivr.net/gh/angelonuffer/dialect@47f7c367224f7c6571b69c8811ce3d923885555a/code/0
+dialect = https://cdn.jsdelivr.net/gh/angelonuffer/dialect@2879ad9375704fe100e05c8694da2d3a14026a58/code/0
 
 // Basic whitespace
 ws_char = {
@@ -24,6 +24,101 @@ opt_ws = {
   grammar: ws_char
   format: "text"
   minimum: 0
+}
+
+// Comment syntax support (using negation grammar type)
+// Single-line comment: // comment text
+// Multi-line comment: /* comment text */
+
+// Single-line comment (// until end of line)
+newline_chars = {
+  type: "alternative"
+  options: [
+    { type: "symbol" text: "
+" }
+    { type: "symbol" text: "\r" }
+  ]
+}
+
+single_line_comment_char = {
+  type: "negation"
+  grammar: newline_chars
+}
+
+single_line_comment_content = {
+  type: "repetition"
+  grammar: single_line_comment_char
+  format: "text"
+  minimum: 0
+}
+
+single_line_comment = {
+  type: "sequence"
+  parts: [
+    { type: "symbol" text: "/" }
+    { type: "symbol" text: "/" }
+    single_line_comment_content
+  ]
+  format: "text"
+}
+
+// Multi-line comment (/* ... */)
+asterisk_symbol = { type: "symbol" text: "*" }
+slash_symbol = { type: "symbol" text: "/" }
+
+not_asterisk = {
+  type: "negation"
+  grammar: asterisk_symbol
+}
+
+not_slash = {
+  type: "negation"
+  grammar: slash_symbol
+}
+
+asterisk_not_slash = {
+  type: "sequence"
+  parts: [
+    asterisk_symbol
+    not_slash
+  ]
+  format: "text"
+}
+
+multi_line_comment_content_char = {
+  type: "alternative"
+  options: [
+    not_asterisk
+    asterisk_not_slash
+  ]
+}
+
+multi_line_comment_content = {
+  type: "repetition"
+  grammar: multi_line_comment_content_char
+  format: "text"
+  minimum: 0
+}
+
+multi_line_comment = {
+  type: "sequence"
+  parts: [
+    slash_symbol
+    asterisk_symbol
+    multi_line_comment_content
+    asterisk_symbol
+    slash_symbol
+  ]
+  format: "text"
+}
+
+// Comment (single or multi-line)
+comment = {
+  type: "alternative"
+  options: [
+    single_line_comment
+    multi_line_comment
+  ]
 }
 
 // Identifiers
