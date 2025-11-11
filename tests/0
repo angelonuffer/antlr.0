@@ -95,6 +95,80 @@ unitest.display(
           unitest.equals([ (result6.success == 1 ? result6.output : "N/A") "grammar Example;" ])
         ]
       })
+      unitest.describe({
+        name: "Single line comment"
+        tests: (
+          result = antlr.parse({
+            input: "grammar Test; // comment"
+          })
+          [
+            unitest.equals([ result.success 1 ])
+          ]
+        )
+      })
+      unitest.describe({
+        name: "Multi-line comment"
+        tests: (
+          result = antlr.parse({
+            input: "grammar Test; /* multi-line
+comment */"
+          })
+          [
+            unitest.equals([ result.success 1 ])
+          ]
+        )
+      })
+      unitest.describe({
+        name: "Comment between rules"
+        tests: (
+          result = antlr.parse({
+            input: "grammar Test;
+// Parser rule
+expr: ID;
+/* Lexer rule */
+ID: [a-z];"
+          })
+          [
+            unitest.equals([ result.success 1 ])
+          ]
+        )
+      })
+      unitest.describe({
+        name: "Nested multi-line comments"
+        tests: (
+          result = antlr.parse({
+            input: "grammar Test; /* outer /* inner */ outer */"
+          })
+          [
+            unitest.equals([ result.success 1 ])
+          ]
+        )
+      })
+      unitest.describe({
+        name: "Comment at end of file"
+        tests: (
+          result = antlr.parse({
+            input: "grammar Test;
+expr: ID;
+// End of grammar"
+          })
+          [
+            unitest.equals([ result.success 1 ])
+          ]
+        )
+      })
+      unitest.describe({
+        name: "Comment inside rule"
+        tests: (
+          result = antlr.parse({
+            input: "grammar Test;
+expr: /* part 1 */ 'hello' /* part 2 */ 'world';"
+          })
+          [
+            unitest.equals([ result.success 1 ])
+          ]
+        )
+      })
     ]
   })
 )
