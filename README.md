@@ -11,7 +11,9 @@ This library uses [dialect](https://github.com/angelonuffer/dialect) for parsing
 - ✅ Parse lexer rules (uppercase names)
 - ✅ Support for string literals (`'text'`)
 - ✅ Support for character classes (`[a-z]`, `[A-Z0-9]`)
+- ✅ Comment syntax support (single-line `//` and multi-line `/* */`)
 - ✅ Generate ANTLR grammar from AST
+- ✅ Uses negation grammar type from dialect
 
 ## Usage
 
@@ -149,7 +151,8 @@ Not yet supported:
 - Parenthesized groups
 - Actions and semantic predicates
 - Grammar options
-- Comments in grammar
+
+Note: Comment syntax definitions (`single_line_comment`, `multi_line_comment`, `comment`) are available in the grammar for custom parsing needs.
 
 ## License
 
