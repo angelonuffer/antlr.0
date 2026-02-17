@@ -1,4 +1,4 @@
-dialect = https://cdn.jsdelivr.net/gh/angelonuffer/dialect@2879ad9375704fe100e05c8694da2d3a14026a58/code/0
+dialect = https://cdn.jsdelivr.net/gh/angelonuffer/dialect@d37c62e/code/0
 
 // Basic whitespace
 ws_char = {
