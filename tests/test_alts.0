@@ -6,12 +6,10 @@ rule: 'a' | 'b' 'c' | 'd';"
 
 result = antlr.parse({ input: test_input })
 
-unitest.display(
-  unitest.describe({
-    name: "Alternatives Test"
-    tests: [
-      unitest.equals([ result.success 1 ])
-      unitest.equals([ (result.success == 1 ? result.value.rules[.] : 0) 1 ])
-    ]
-  })
-)
+unitest.describe({
+  name: "Alternatives Test"
+  tests: [
+    unitest.equals([ result.success 1 ])
+    unitest.equals([ (result.success == 1 ? result.value.rules[.] : 0) 1 ])
+  ]
+})

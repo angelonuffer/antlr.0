@@ -272,6 +272,10 @@ expr: 'hello' // middle comment
           ]
         )
       })
+      repro_issue_6.0
+      test_alts.0
+      test_lexer.0
+      test_mode.0
     ]
   })
 )
