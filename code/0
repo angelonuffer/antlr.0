@@ -1,36 +1,8 @@
 dialect = https://cdn.jsdelivr.net/gh/angelonuffer/dialect@d37c62e/code/0
 
-// Basic whitespace
-ws_char = {
-  type: "alternative"
-  options: [
-    { type: "symbol" text: " " }
-    { type: "symbol" text: "\t" }
-    { type: "symbol" text: "
-" }
-    { type: "symbol" text: "\r" }
-  ]
-}
-
-ws = {
-  type: "repetition"
-  grammar: ws_char
-  format: "text"
-  minimum: 1
-}
-
-opt_ws = {
-  type: "repetition"
-  grammar: ws_char
-  format: "text"
-  minimum: 0
-}
+// --- Independent Rules (No whitespace dependency) ---
 
 // Comment syntax support (using negation grammar type)
-// Single-line comment: // comment text
-// Multi-line comment: /* comment text */
-
-// Single-line comment (// until end of line)
 newline_chars = {
   type: "alternative"
   options: [
@@ -62,7 +34,6 @@ single_line_comment = {
   format: "text"
 }
 
-// Multi-line comment (/* ... */)
 asterisk_symbol = { type: "symbol" text: "*" }
 slash_symbol = { type: "symbol" text: "/" }
 
@@ -112,7 +83,6 @@ multi_line_comment = {
   format: "text"
 }
 
-// Comment (single or multi-line)
 comment = {
   type: "alternative"
   options: [
@@ -121,7 +91,7 @@ comment = {
   ]
 }
 
-// Identifiers
+// Basic identifier parts (shared)
 identifier_start = {
   type: "alternative"
   options: [
@@ -141,91 +111,18 @@ identifier_char = {
   ]
 }
 
-identifier = {
-  type: "sequence"
-  parts: [
-    identifier_start
-    {
-      type: "repetition"
-      grammar: identifier_char
-      format: "text"
-      minimum: 0
-    }
-  ]
-  format: "text"
-}
-
-// Parser rule name (lowercase start)
-parser_rule_name = {
-  type: "sequence"
-  parts: [
-    { type: "range" from: "a" to: "z" }
-    {
-      type: "repetition"
-      grammar: identifier_char
-      format: "text"
-      minimum: 0
-    }
-  ]
-  format: "text"
-}
-
-// Lexer rule name (uppercase start)
-lexer_rule_name = {
-  type: "sequence"
-  parts: [
-    { type: "range" from: "A" to: "Z" }
-    {
-      type: "repetition"
-      grammar: identifier_char
-      format: "text"
-      minimum: 0
-    }
-  ]
-  format: "text"
-}
-
-// String literals (single quoted)
+// Primitive content rules (no whitespace)
 string_content_char = {
   type: "alternative"
   options: [
     { type: "symbol" text: "\\'" }
     { type: "symbol" text: "\\\\" }
-    {
-      type: "range"
-      from: " "
-      to: "&"
-    }
-    {
-      type: "range"
-      from: "("
-      to: "["
-    }
-    {
-      type: "range"
-      from: "]"
-      to: "~"
-    }
+    { type: "range" from: " " to: "&" }
+    { type: "range" from: "(" to: "[" }
+    { type: "range" from: "]" to: "~" }
   ]
 }
 
-string_literal = {
-  type: "sequence"
-  parts: [
-    { name: "open" grammar: { type: "symbol" text: "'" } }
-    { name: "content" grammar: {
-      type: "repetition"
-      grammar: string_content_char
-      format: "text"
-      minimum: 0
-    }}
-    { name: "close" grammar: { type: "symbol" text: "'" } }
-  ]
-  format: "object"
-}
-
-// Character class content (supports ranges like a-z)
-// Note: ] is excluded to not be consumed by the repetition
 char_class_item = {
   type: "alternative"
   options: [
@@ -260,144 +157,253 @@ char_class_item = {
   ]
 }
 
-char_class = {
-  type: "sequence"
-  parts: [
-    { name: "open" grammar: { type: "symbol" text: "[" } }
-    { name: "content" grammar: {
-      type: "repetition"
-      grammar: char_class_item
-      format: "text"
-      minimum: 1
-    }}
-    { name: "close" grammar: { type: "symbol" text: "]" } }
-  ]
-  format: "object"
-}
+// --- Whitespace-Dependent Rules Factory ---
 
-// Rule element (simplified - identifier, string literal, or char class)
-rule_element = {
+make_antlr_grammar = { ws_char } => (
+  ws = {
+    type: "repetition"
+    grammar: ws_char
+    format: "text"
+    minimum: 1
+  }
+
+  opt_ws = {
+    type: "repetition"
+    grammar: ws_char
+    format: "text"
+    minimum: 0
+  }
+
+  // Identifiers (defined here to ensure any future whitespace dependency is handled)
+  identifier = {
+    type: "sequence"
+    parts: [
+      identifier_start
+      {
+        type: "repetition"
+        grammar: identifier_char
+        format: "text"
+        minimum: 0
+      }
+    ]
+    format: "text"
+  }
+
+  parser_rule_name = {
+    type: "sequence"
+    parts: [
+      { type: "range" from: "a" to: "z" }
+      {
+        type: "repetition"
+        grammar: identifier_char
+        format: "text"
+        minimum: 0
+      }
+    ]
+    format: "text"
+  }
+
+  lexer_rule_name = {
+    type: "sequence"
+    parts: [
+      { type: "range" from: "A" to: "Z" }
+      {
+        type: "repetition"
+        grammar: identifier_char
+        format: "text"
+        minimum: 0
+      }
+    ]
+    format: "text"
+  }
+
+  string_literal = {
+    type: "sequence"
+    parts: [
+      { name: "open" grammar: { type: "symbol" text: "'" } }
+      { name: "content" grammar: {
+        type: "repetition"
+        grammar: string_content_char
+        format: "text"
+        minimum: 0
+      }}
+      { name: "close" grammar: { type: "symbol" text: "'" } }
+    ]
+    format: "object"
+  }
+
+  char_class = {
+    type: "sequence"
+    parts: [
+      { name: "open" grammar: { type: "symbol" text: "[" } }
+      { name: "content" grammar: {
+        type: "repetition"
+        grammar: char_class_item
+        format: "text"
+        minimum: 1
+      }}
+      { name: "close" grammar: { type: "symbol" text: "]" } }
+    ]
+    format: "object"
+  }
+
+  rule_element = {
+    type: "alternative"
+    options: [
+      string_literal
+      char_class
+      identifier
+    ]
+  }
+
+  // Rule body - sequence of elements
+  rule_body = {
+    type: "sequence"
+    parts: [
+      { name: "first" grammar: rule_element }
+      { name: "rest" grammar: {
+        type: "repetition"
+        grammar: {
+          type: "sequence"
+          parts: [
+            { name: "ws" grammar: ws }
+            { name: "element" grammar: rule_element }
+          ]
+          format: "object"
+        }
+        format: "list"
+        minimum: 0
+      }}
+    ]
+    format: "object"
+  }
+
+  // Parser rule definition
+  parser_rule = {
+    type: "sequence"
+    parts: [
+      { name: "name" grammar: parser_rule_name }
+      { name: "ws1" grammar: opt_ws }
+      { name: "colon" grammar: { type: "symbol" text: ":" } }
+      { name: "ws2" grammar: opt_ws }
+      { name: "body" grammar: rule_body }
+      { name: "ws3" grammar: opt_ws }
+      { name: "semicolon" grammar: { type: "symbol" text: ";" } }
+    ]
+    format: "object"
+  }
+
+  // Lexer rule definition
+  lexer_rule = {
+    type: "sequence"
+    parts: [
+      { name: "name" grammar: lexer_rule_name }
+      { name: "ws1" grammar: opt_ws }
+      { name: "colon" grammar: { type: "symbol" text: ":" } }
+      { name: "ws2" grammar: opt_ws }
+      { name: "body" grammar: rule_body }
+      { name: "ws3" grammar: opt_ws }
+      { name: "semicolon" grammar: { type: "symbol" text: ";" } }
+    ]
+    format: "object"
+  }
+
+  // Any rule (parser or lexer) - try lexer first
+  any_rule = {
+    type: "alternative"
+    options: [
+      lexer_rule
+      parser_rule
+    ]
+  }
+
+  // Grammar declaration
+  grammar_decl = {
+    type: "sequence"
+    parts: [
+      { name: "keyword" grammar: { type: "symbol" text: "grammar" } }
+      { name: "ws1" grammar: ws }
+      { name: "name" grammar: identifier }
+      { name: "ws2" grammar: opt_ws }
+      { name: "semicolon" grammar: { type: "symbol" text: ";" } }
+    ]
+    format: "object"
+  }
+
+  // Full grammar with optional rules
+  antlr_grammar = {
+    type: "sequence"
+    parts: [
+      { name: "ws_start" grammar: opt_ws }
+      { name: "grammar_decl" grammar: grammar_decl }
+      { name: "rules" grammar: {
+        type: "repetition"
+        grammar: {
+          type: "sequence"
+          parts: [
+            { name: "ws" grammar: opt_ws }
+            { name: "rule" grammar: any_rule }
+          ]
+          format: "object"
+        }
+        format: "list"
+        minimum: 0
+      }}
+      { name: "ws_end" grammar: opt_ws }
+    ]
+    format: "object"
+  }
+
+  antlr_grammar
+)
+
+// --- Grammar Instances ---
+
+ws_char_base = {
   type: "alternative"
   options: [
-    string_literal
-    char_class
-    identifier
+    { type: "symbol" text: " " }
+    { type: "symbol" text: "\t" }
+    { type: "symbol" text: "
+" }
+    { type: "symbol" text: "\r" }
   ]
 }
 
-// Rule body - sequence of elements
-rule_body = {
-  type: "sequence"
-  parts: [
-    { name: "first" grammar: rule_element }
-    { name: "rest" grammar: {
-      type: "repetition"
-      grammar: {
-        type: "sequence"
-        parts: [
-          { name: "ws" grammar: ws }
-          { name: "element" grammar: rule_element }
-        ]
-        format: "object"
-      }
-      format: "list"
-      minimum: 0
-    }}
-  ]
-  format: "object"
-}
-
-// Parser rule definition
-parser_rule = {
-  type: "sequence"
-  parts: [
-    { name: "name" grammar: parser_rule_name }
-    { name: "ws1" grammar: opt_ws }
-    { name: "colon" grammar: { type: "symbol" text: ":" } }
-    { name: "ws2" grammar: opt_ws }
-    { name: "body" grammar: rule_body }
-    { name: "ws3" grammar: opt_ws }
-    { name: "semicolon" grammar: { type: "symbol" text: ";" } }
-  ]
-  format: "object"
-}
-
-// Lexer rule definition
-lexer_rule = {
-  type: "sequence"
-  parts: [
-    { name: "name" grammar: lexer_rule_name }
-    { name: "ws1" grammar: opt_ws }
-    { name: "colon" grammar: { type: "symbol" text: ":" } }
-    { name: "ws2" grammar: opt_ws }
-    { name: "body" grammar: rule_body }
-    { name: "ws3" grammar: opt_ws }
-    { name: "semicolon" grammar: { type: "symbol" text: ";" } }
-  ]
-  format: "object"
-}
-
-// Any rule (parser or lexer) - try lexer first
-any_rule = {
+ws_char_parse = {
   type: "alternative"
   options: [
-    lexer_rule
-    parser_rule
+    { type: "symbol" text: " " }
+    { type: "symbol" text: "\t" }
+    { type: "symbol" text: "
+" }
+    { type: "symbol" text: "\r" }
+    comment
   ]
 }
 
-// Grammar declaration
-grammar_decl = {
-  type: "sequence"
-  parts: [
-    { name: "keyword" grammar: { type: "symbol" text: "grammar" } }
-    { name: "ws1" grammar: ws }
-    { name: "name" grammar: identifier }
-    { name: "ws2" grammar: opt_ws }
-    { name: "semicolon" grammar: { type: "symbol" text: ";" } }
-  ]
-  format: "object"
-}
+ws_char_generate = ws_char_base
 
-// Full grammar with optional rules
-antlr_grammar = {
-  type: "sequence"
-  parts: [
-    { name: "ws_start" grammar: opt_ws }
-    { name: "grammar_decl" grammar: grammar_decl }
-    { name: "rules" grammar: {
-      type: "repetition"
-      grammar: {
-        type: "sequence"
-        parts: [
-          { name: "ws" grammar: opt_ws }
-          { name: "rule" grammar: any_rule }
-        ]
-        format: "object"
-      }
-      format: "list"
-      minimum: 0
-    }}
-    { name: "ws_end" grammar: opt_ws }
-  ]
-  format: "object"
-}
+antlr_grammar_parse = make_antlr_grammar({ ws_char: ws_char_parse })
+antlr_grammar_generate = make_antlr_grammar({ ws_char: ws_char_generate })
+
+// --- API ---
 
 // Parse function
 parse = { input } => dialect.parse({
   input: input
-  grammar: antlr_grammar
+  grammar: antlr_grammar_parse
 })
 
 // Generate function
 generate = { ast } => dialect.generate({
   value: ast
-  grammar: antlr_grammar
+  grammar: antlr_grammar_generate
 })
 
 // Export API
 {
   parse: parse
   generate: generate
-  grammar: antlr_grammar
+  grammar: antlr_grammar_parse
 }
