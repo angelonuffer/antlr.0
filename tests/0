@@ -34,6 +34,8 @@ result5 = antlr.parse({ input: test_input5 })
 test_ast = {
   ws_start: ""
   grammar_decl: {
+    kind: ""
+    ws_kind: ""
     keyword: "grammar"
     ws1: " "
     name: "Example"
@@ -215,6 +217,58 @@ expr: 'hello' // middle comment
           })
           [
             unitest.equals([ result.success 1 ])
+          ]
+        )
+      })
+      unitest.describe({
+        name: "Lexer grammar declaration"
+        tests: (
+          result = antlr.parse({
+            input: "lexer grammar MyLexer;"
+          })
+          [
+            unitest.equals([ result.success 1 ])
+            unitest.equals([ (result.success == 1 ? result.value.grammar_decl.kind : "N/A") "lexer" ])
+            unitest.equals([ (result.success == 1 ? result.value.grammar_decl.ws_kind : "N/A") " " ])
+            unitest.equals([ (result.success == 1 ? result.value.grammar_decl.name : "N/A") "MyLexer" ])
+          ]
+        )
+      })
+      unitest.describe({
+        name: "Parser grammar declaration"
+        tests: (
+          result = antlr.parse({
+            input: "parser grammar MyParser;"
+          })
+          [
+            unitest.equals([ result.success 1 ])
+            unitest.equals([ (result.success == 1 ? result.value.grammar_decl.kind : "N/A") "parser" ])
+            unitest.equals([ (result.success == 1 ? result.value.grammar_decl.ws_kind : "N/A") " " ])
+            unitest.equals([ (result.success == 1 ? result.value.grammar_decl.name : "N/A") "MyParser" ])
+          ]
+        )
+      })
+      unitest.describe({
+        name: "Generate lexer grammar from AST"
+        tests: (
+          test_ast_lexer = {
+            ws_start: ""
+            grammar_decl: {
+              kind: "lexer"
+              ws_kind: " "
+              keyword: "grammar"
+              ws1: " "
+              name: "MyLexer"
+              ws2: ""
+              semicolon: ";"
+            }
+            rules: []
+            ws_end: ""
+          }
+          result_lexer = antlr.generate({ ast: test_ast_lexer })
+          [
+            unitest.equals([ result_lexer.success 1 ])
+            unitest.equals([ (result_lexer.success == 1 ? result_lexer.output : "N/A") "lexer grammar MyLexer;" ])
           ]
         )
       })

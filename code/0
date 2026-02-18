@@ -321,6 +321,20 @@ make_antlr_grammar = { ws_char } => (
   grammar_decl = {
     type: "sequence"
     parts: [
+      { name: "kind" grammar: {
+        type: "repetition"
+        grammar: {
+          type: "alternative"
+          options: [
+            { type: "symbol" text: "lexer" }
+            { type: "symbol" text: "parser" }
+          ]
+        }
+        minimum: 0
+        maximum: 1
+        format: "text"
+      }}
+      { name: "ws_kind" grammar: opt_ws }
       { name: "keyword" grammar: { type: "symbol" text: "grammar" } }
       { name: "ws1" grammar: ws }
       { name: "name" grammar: identifier }
