@@ -1,0 +1,27 @@
+antlr = ../code/0
+unitest = unitest.0
+
+test_input = "grammar XML;
+COMMENT : '<!--' .*? '-->' ;
+DTD : '<!' .*? '>' -> skip ;
+CharRef : '&#' DIGIT+ ';' ;
+Name : NameStartChar NameChar* ;
+fragment DIGIT: [0-9] ;
+WS : [ \t\r\n]+ -> skip ;
+TAG : '<' [a-zA-Z]+ '>' ;
+nested : (element | text)* ;
+mode INSIDE;
+CLOSE : '>' -> popMode;
+"
+
+result = antlr.parse({ input: test_input })
+
+unitest.display(
+  unitest.describe({
+    name: "Reproduction Issue #6"
+    tests: [
+      unitest.equals([ result.success 1 ])
+      unitest.equals([ (result.success == 1 ? result.value.rules[.] : 0) 10 ])
+    ]
+  })
+)
