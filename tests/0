@@ -169,6 +169,55 @@ expr: /* part 1 */ 'hello' /* part 2 */ 'world';"
           ]
         )
       })
+      unitest.describe({
+        name: "Comment at the beginning"
+        tests: (
+          result = antlr.parse({
+            input: "// starting comment
+grammar Test;"
+          })
+          [
+            unitest.equals([ result.success 1 ])
+          ]
+        )
+      })
+      unitest.describe({
+        name: "Comment between grammar name and semicolon"
+        tests: (
+          result = antlr.parse({
+            input: "grammar Test /* comment */ ;"
+          })
+          [
+            unitest.equals([ result.success 1 ])
+          ]
+        )
+      })
+      unitest.describe({
+        name: "Comment before lexer rule"
+        tests: (
+          result = antlr.parse({
+            input: "grammar Test;
+/* Lexer rule */
+ID: [a-z];"
+          })
+          [
+            unitest.equals([ result.success 1 ])
+          ]
+        )
+      })
+      unitest.describe({
+        name: "Comment between rule elements"
+        tests: (
+          result = antlr.parse({
+            input: "grammar Test;
+expr: 'hello' // middle comment
+      'world';"
+          })
+          [
+            unitest.equals([ result.success 1 ])
+          ]
+        )
+      })
     ]
   })
 )
