@@ -111,12 +111,46 @@ identifier_char = {
   ]
 }
 
+hex_digit = {
+  type: "alternative"
+  options: [
+    { type: "range" from: "0" to: "9" }
+    { type: "range" from: "a" to: "f" }
+    { type: "range" from: "A" to: "F" }
+  ]
+}
+
 // Primitive content rules (no whitespace)
 string_content_char = {
   type: "alternative"
   options: [
-    { type: "symbol" text: "\\'" }
-    { type: "symbol" text: "\\\\" }
+    {
+      type: "sequence"
+      parts: [
+        { type: "symbol" text: "\\" }
+        {
+          type: "alternative"
+          options: [
+            { type: "symbol" text: "'" }
+            { type: "symbol" text: "\\" }
+            { type: "symbol" text: "n" }
+            { type: "symbol" text: "r" }
+            { type: "symbol" text: "t" }
+            { type: "symbol" text: "b" }
+            { type: "symbol" text: "f" }
+            {
+              type: "sequence"
+              parts: [
+                { type: "symbol" text: "u" }
+                { type: "repetition" grammar: hex_digit minimum: 4 maximum: 4 format: "text" }
+              ]
+              format: "text"
+            }
+          ]
+        }
+      ]
+      format: "text"
+    }
     { type: "range" from: " " to: "&" }
     { type: "range" from: "(" to: "[" }
     { type: "range" from: "]" to: "~" }
@@ -126,6 +160,14 @@ string_content_char = {
 char_class_item = {
   type: "alternative"
   options: [
+    {
+      type: "sequence"
+      parts: [
+        { type: "symbol" text: "\\" }
+        { type: "range" from: " " to: "~" }
+      ]
+      format: "text"
+    }
     {
       type: "sequence"
       parts: [
@@ -247,27 +289,118 @@ make_antlr_grammar = { ws_char } => (
     format: "object"
   }
 
-  rule_element = {
+  digits = {
+    type: "repetition"
+    grammar: { type: "range" from: "0" to: "9" }
+    format: "text"
+    minimum: 1
+  }
+
+  bounded_quantifier = {
+    type: "sequence"
+    parts: [
+      { type: "symbol" text: "{" }
+      digits
+      {
+        type: "repetition"
+        grammar: {
+          type: "sequence"
+          parts: [
+            { type: "symbol" text: "," }
+            {
+              type: "repetition"
+              grammar: digits
+              minimum: 0
+              maximum: 1
+              format: "text"
+            }
+          ]
+          format: "text"
+        }
+        minimum: 0
+        maximum: 1
+        format: "text"
+      }
+      { type: "symbol" text: "}" }
+    ]
+    format: "text"
+  }
+
+  quantifier = {
+    type: "alternative"
+    options: [
+      { type: "symbol" text: "*?" }
+      { type: "symbol" text: "+?" }
+      { type: "symbol" text: "*" }
+      { type: "symbol" text: "+" }
+      { type: "symbol" text: "?" }
+      bounded_quantifier
+    ]
+  }
+
+  lexer_command = {
+    type: "sequence"
+    parts: [
+      { name: "name" grammar: identifier }
+      { name: "args" grammar: {
+        type: "repetition"
+        grammar: {
+          type: "sequence"
+          parts: [
+            { name: "open" grammar: { type: "symbol" text: "(" } }
+            { name: "ws1" grammar: opt_ws }
+            { name: "arg" grammar: identifier }
+            { name: "ws2" grammar: opt_ws }
+            { name: "close" grammar: { type: "symbol" text: ")" } }
+          ]
+          format: "object"
+        }
+        minimum: 0
+        maximum: 1
+        format: "list"
+      }}
+    ]
+    format: "object"
+  }
+
+  // --- Level 0 Grammar (No nested groups) ---
+
+  rule_element_0 = {
     type: "alternative"
     options: [
       string_literal
       char_class
+      { type: "symbol" text: "." }
       identifier
     ]
   }
 
-  // Rule body - sequence of elements
-  rule_body = {
+  element_with_quantifier_0 = {
     type: "sequence"
     parts: [
-      { name: "first" grammar: rule_element }
+      { name: "element" grammar: rule_element_0 }
+      { name: "quantifier" grammar: {
+        type: "repetition"
+        grammar: quantifier
+        minimum: 0
+        maximum: 1
+        format: "text"
+      }}
+    ]
+    format: "object"
+  }
+
+  rule_alt_0 = {
+    type: "sequence"
+    parts: [
+      { name: "first" grammar: element_with_quantifier_0 }
       { name: "rest" grammar: {
         type: "repetition"
         grammar: {
           type: "sequence"
           parts: [
             { name: "ws" grammar: ws }
-            { name: "element" grammar: rule_element }
+            { name: "element" grammar: element_with_quantifier_0 }
           ]
           format: "object"
         }
@@ -277,6 +410,201 @@ make_antlr_grammar = { ws_char } => (
     ]
     format: "object"
   }
+
+  rule_body_0 = {
+    type: "sequence"
+    parts: [
+      { name: "first" grammar: rule_alt_0 }
+      { name: "rest" grammar: {
+        type: "repetition"
+        grammar: {
+          type: "sequence"
+          parts: [
+            { name: "ws1" grammar: opt_ws }
+            { name: "pipe" grammar: { type: "symbol" text: "|" } }
+            { name: "ws2" grammar: opt_ws }
+            { name: "alt" grammar: rule_alt_0 }
+          ]
+          format: "object"
+        }
+        format: "list"
+        minimum: 0
+      }}
+    ]
+    format: "object"
+  }
+
+  // --- Level 1 Grammar (One level of nested groups) ---
+
+  group_1 = {
+    type: "sequence"
+    parts: [
+      { name: "open" grammar: { type: "symbol" text: "(" } }
+      { name: "ws1" grammar: opt_ws }
+      { name: "body" grammar: rule_body_0 }
+      { name: "ws2" grammar: opt_ws }
+      { name: "close" grammar: { type: "symbol" text: ")" } }
+    ]
+    format: "object"
+  }
+
+  rule_element_1 = {
+    type: "alternative"
+    options: [
+      string_literal
+      char_class
+      { type: "symbol" text: "." }
+      group_1
+      identifier
+    ]
+  }
+
+  element_with_quantifier_1 = {
+    type: "sequence"
+    parts: [
+      { name: "element" grammar: rule_element_1 }
+      { name: "quantifier" grammar: {
+        type: "repetition"
+        grammar: quantifier
+        minimum: 0
+        maximum: 1
+        format: "text"
+      }}
+    ]
+    format: "object"
+  }
+
+  rule_alt_1 = {
+    type: "sequence"
+    parts: [
+      { name: "first" grammar: element_with_quantifier_1 }
+      { name: "rest" grammar: {
+        type: "repetition"
+        grammar: {
+          type: "sequence"
+          parts: [
+            { name: "ws" grammar: ws }
+            { name: "element" grammar: element_with_quantifier_1 }
+          ]
+          format: "object"
+        }
+        format: "list"
+        minimum: 0
+      }}
+    ]
+    format: "object"
+  }
+
+  rule_body_1 = {
+    type: "sequence"
+    parts: [
+      { name: "first" grammar: rule_alt_1 }
+      { name: "rest" grammar: {
+        type: "repetition"
+        grammar: {
+          type: "sequence"
+          parts: [
+            { name: "ws1" grammar: opt_ws }
+            { name: "pipe" grammar: { type: "symbol" text: "|" } }
+            { name: "ws2" grammar: opt_ws }
+            { name: "alt" grammar: rule_alt_1 }
+          ]
+          format: "object"
+        }
+        format: "list"
+        minimum: 0
+      }}
+    ]
+    format: "object"
+  }
+
+  // --- Level 2 Grammar (Two levels of nested groups) ---
+
+  group_2 = {
+    type: "sequence"
+    parts: [
+      { name: "open" grammar: { type: "symbol" text: "(" } }
+      { name: "ws1" grammar: opt_ws }
+      { name: "body" grammar: rule_body_1 }
+      { name: "ws2" grammar: opt_ws }
+      { name: "close" grammar: { type: "symbol" text: ")" } }
+    ]
+    format: "object"
+  }
+
+  rule_element_2 = {
+    type: "alternative"
+    options: [
+      string_literal
+      char_class
+      { type: "symbol" text: "." }
+      group_2
+      identifier
+    ]
+  }
+
+  element_with_quantifier_2 = {
+    type: "sequence"
+    parts: [
+      { name: "element" grammar: rule_element_2 }
+      { name: "quantifier" grammar: {
+        type: "repetition"
+        grammar: quantifier
+        minimum: 0
+        maximum: 1
+        format: "text"
+      }}
+    ]
+    format: "object"
+  }
+
+  rule_alt_2 = {
+    type: "sequence"
+    parts: [
+      { name: "first" grammar: element_with_quantifier_2 }
+      { name: "rest" grammar: {
+        type: "repetition"
+        grammar: {
+          type: "sequence"
+          parts: [
+            { name: "ws" grammar: ws }
+            { name: "element" grammar: element_with_quantifier_2 }
+          ]
+          format: "object"
+        }
+        format: "list"
+        minimum: 0
+      }}
+    ]
+    format: "object"
+  }
+
+  rule_body_2 = {
+    type: "sequence"
+    parts: [
+      { name: "first" grammar: rule_alt_2 }
+      { name: "rest" grammar: {
+        type: "repetition"
+        grammar: {
+          type: "sequence"
+          parts: [
+            { name: "ws1" grammar: opt_ws }
+            { name: "pipe" grammar: { type: "symbol" text: "|" } }
+            { name: "ws2" grammar: opt_ws }
+            { name: "alt" grammar: rule_alt_2 }
+          ]
+          format: "object"
+        }
+        format: "list"
+        minimum: 0
+      }}
+    ]
+    format: "object"
+  }
+
+  // Use the deepest level for actual grammar
+  rule_element = rule_element_2
+  rule_body = rule_body_2
 
   // Parser rule definition
   parser_rule = {
@@ -297,23 +625,81 @@ make_antlr_grammar = { ws_char } => (
   lexer_rule = {
     type: "sequence"
     parts: [
+      { name: "fragment" grammar: {
+        type: "repetition"
+        grammar: {
+          type: "sequence"
+          parts: [
+            { name: "keyword" grammar: { type: "symbol" text: "fragment" } }
+            { name: "ws" grammar: ws }
+          ]
+          format: "object"
+        }
+        minimum: 0
+        maximum: 1
+        format: "list"
+      }}
       { name: "name" grammar: lexer_rule_name }
       { name: "ws1" grammar: opt_ws }
       { name: "colon" grammar: { type: "symbol" text: ":" } }
       { name: "ws2" grammar: opt_ws }
       { name: "body" grammar: rule_body }
+      { name: "ws_command" grammar: opt_ws }
+      { name: "commands" grammar: {
+        type: "repetition"
+        grammar: {
+          type: "sequence"
+          parts: [
+            { name: "arrow" grammar: { type: "symbol" text: "->" } }
+            { name: "ws1" grammar: opt_ws }
+            { name: "first" grammar: lexer_command }
+            { name: "rest" grammar: {
+              type: "repetition"
+              grammar: {
+                type: "sequence"
+                parts: [
+                  { name: "ws_pre" grammar: opt_ws }
+                  { name: "comma" grammar: { type: "symbol" text: "," } }
+                  { name: "ws_post" grammar: opt_ws }
+                  { name: "command" grammar: lexer_command }
+                ]
+                format: "object"
+              }
+              format: "list"
+              minimum: 0
+            }}
+          ]
+          format: "object"
+        }
+        minimum: 0
+        maximum: 1
+        format: "list"
+      }}
       { name: "ws3" grammar: opt_ws }
       { name: "semicolon" grammar: { type: "symbol" text: ";" } }
     ]
     format: "object"
   }
 
-  // Any rule (parser or lexer) - try lexer first
+  mode_decl = {
+    type: "sequence"
+    parts: [
+      { name: "keyword" grammar: { type: "symbol" text: "mode" } }
+      { name: "ws1" grammar: ws }
+      { name: "name" grammar: identifier }
+      { name: "ws2" grammar: opt_ws }
+      { name: "semicolon" grammar: { type: "symbol" text: ";" } }
+    ]
+    format: "object"
+  }
+
+  // Any rule (parser or lexer) or top-level declaration - try lexer first
   any_rule = {
     type: "alternative"
     options: [
       lexer_rule
       parser_rule
+      mode_decl
     ]
   }
 

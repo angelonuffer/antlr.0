@@ -1,0 +1,17 @@
+antlr = ../code/0
+unitest = unitest.0
+
+test_input = "lexer grammar L;
+A: 'a';
+mode M;
+B: 'b';"
+
+result = antlr.parse({ input: test_input })
+
+unitest.describe({
+  name: "Mode Declaration Test"
+  tests: [
+    unitest.equals([ result.success 1 ])
+    unitest.equals([ (result.success == 1 ? result.value.rules[.] : 0) 3 ])
+  ]
+})
