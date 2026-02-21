@@ -163,38 +163,53 @@ char_class_item = {
     {
       type: "sequence"
       parts: [
-        { type: "symbol" text: "\\" }
-        { type: "range" from: " " to: "~" }
+        { name: "backslash" grammar: { type: "symbol" text: "\\" } }
+        { name: "char" grammar: { type: "range" from: " " to: "~" } }
       ]
-      format: "text"
+      format: "object"
     }
     {
       type: "sequence"
       parts: [
         {
-          type: "alternative"
-          options: [
-            { type: "range" from: " " to: "\\" }
-            { type: "range" from: "^" to: "~" }
-          ]
+          name: "from"
+          grammar: {
+            type: "alternative"
+            options: [
+              { type: "range" from: " " to: "\\" }
+              { type: "range" from: "^" to: "~" }
+            ]
+          }
         }
-        { type: "symbol" text: "-" }
+        { name: "dash" grammar: { type: "symbol" text: "-" } }
         {
-          type: "alternative"
-          options: [
-            { type: "range" from: " " to: "\\" }
-            { type: "range" from: "^" to: "~" }
-          ]
+          name: "to"
+          grammar: {
+            type: "alternative"
+            options: [
+              { type: "range" from: " " to: "\\" }
+              { type: "range" from: "^" to: "~" }
+            ]
+          }
         }
       ]
-      format: "text"
+      format: "object"
     }
     {
-      type: "alternative"
-      options: [
-        { type: "range" from: " " to: "\\" }
-        { type: "range" from: "^" to: "~" }
+      type: "sequence"
+      parts: [
+        {
+          name: "char"
+          grammar: {
+            type: "alternative"
+            options: [
+              { type: "range" from: " " to: "\\" }
+              { type: "range" from: "^" to: "~" }
+            ]
+          }
+        }
       ]
+      format: "object"
     }
   ]
 }
@@ -281,7 +296,7 @@ make_antlr_grammar = { ws_char } => (
       { name: "content" grammar: {
         type: "repetition"
         grammar: char_class_item
-        format: "text"
+        format: "list"
         minimum: 1
       }}
       { name: "close" grammar: { type: "symbol" text: "]" } }
@@ -787,6 +802,126 @@ ws_char_generate = ws_char_base
 antlr_grammar_parse = make_antlr_grammar({ ws_char: ws_char_parse })
 antlr_grammar_generate = make_antlr_grammar({ ws_char: ws_char_generate })
 
+// --- to_dialect ---
+
+to_dialect_char_class_item = item =>
+  | (item.dash == "-") = { type: "range" from: item.from to: item.to }
+  | (item.backslash == "\\") = { type: "symbol" text: item.char }
+  | { type: "symbol" text: item.char }
+
+to_dialect_char_class = { items index result } =>
+  | (index >= items[.]) = { type: "alternative" options: result }
+  | to_dialect_char_class({
+      items: items
+      index: index + 1
+      result: [ ...result to_dialect_char_class_item(items[index]) ]
+    })
+
+to_dialect_quantifier = { grammar quantifier } =>
+  | (quantifier == "*") = { type: "repetition" grammar: grammar minimum: 0 }
+  | (quantifier == "+") = { type: "repetition" grammar: grammar minimum: 1 }
+  | (quantifier == "?") = { type: "repetition" grammar: grammar minimum: 0 maximum: 1 }
+  | (quantifier == "*?") = { type: "repetition" grammar: grammar minimum: 0 }
+  | (quantifier == "+?") = { type: "repetition" grammar: grammar minimum: 1 }
+  | (quantifier == "") = grammar
+  | { type: "repetition" grammar: grammar }
+
+to_dialect_is_string = val => (val == val + "")
+
+to_dialect_element = { element convert_body } =>
+  | (to_dialect_is_string(element) & element == ".") = { type: "negation" grammar: { type: "symbol" text: "" } }
+  | (to_dialect_is_string(element)) = { type: "reference" name: element }
+  | (element.open == "(") = convert_body(element.body)
+  | (element.open == "'") = { type: "symbol" text: element.content }
+  | (element.open == "[") = to_dialect_char_class({ items: element.content index: 0 result: [] })
+  | { type: "reference" name: "unknown" }
+
+to_dialect_collect_elements = { first rest convert_body index result } =>
+  | (index > rest[.]) = result
+  | (index == 0) = to_dialect_collect_elements({
+      first: first
+      rest: rest
+      convert_body: convert_body
+      index: 1
+      result: [ to_dialect_quantifier({
+        grammar: to_dialect_element({ element: first.element convert_body: convert_body })
+        quantifier: first.quantifier
+      }) ]
+    })
+  | to_dialect_collect_elements({
+      first: first
+      rest: rest
+      convert_body: convert_body
+      index: index + 1
+      result: [
+        ...result
+        to_dialect_quantifier({
+          grammar: to_dialect_element({ element: rest[index - 1].element.element convert_body: convert_body })
+          quantifier: rest[index - 1].element.quantifier
+        })
+      ]
+    })
+
+to_dialect_alt = { alt convert_body } =>
+  | (alt.rest[.] == 0) = to_dialect_quantifier({
+      grammar: to_dialect_element({ element: alt.first.element convert_body: convert_body })
+      quantifier: alt.first.quantifier
+    })
+  | {
+      type: "sequence"
+      parts: to_dialect_collect_elements({
+        first: alt.first
+        rest: alt.rest
+        convert_body: convert_body
+        index: 0
+        result: []
+      })
+    }
+
+to_dialect_collect_alts = { first rest index result } =>
+  | (index > rest[.]) = result
+  | (index == 0) = to_dialect_collect_alts({
+      first: first
+      rest: rest
+      index: 1
+      result: [ to_dialect_alt({ alt: first convert_body: to_dialect_body }) ]
+    })
+  | to_dialect_collect_alts({
+      first: first
+      rest: rest
+      index: index + 1
+      result: [
+        ...result
+        to_dialect_alt({ alt: rest[index - 1].alt convert_body: to_dialect_body })
+      ]
+    })
+
+to_dialect_body = body =>
+  | (body.rest[.] == 0) = to_dialect_alt({ alt: body.first convert_body: to_dialect_body })
+  | {
+      type: "alternative"
+      options: to_dialect_collect_alts({
+        first: body.first
+        rest: body.rest
+        index: 0
+        result: []
+      })
+    }
+
+to_dialect_rules = { rules index result } =>
+  | (index >= rules[.]) = result
+  | (rules[index].rule.body == 0) = to_dialect_rules({ rules: rules index: index + 1 result: result })
+  | to_dialect_rules({
+      rules: rules
+      index: index + 1
+      result: {
+        ...result
+        [rules[index].rule.name]: to_dialect_body(rules[index].rule.body)
+      }
+    })
+
+ast_to_dialect = { ast } => to_dialect_rules({ rules: ast.rules index: 0 result: {} })
+
 // --- API ---
 
 // Parse function
@@ -805,5 +940,6 @@ generate = { ast } => dialect.generate({
 {
   parse: parse
   generate: generate
+  to_dialect: ast_to_dialect
   grammar: antlr_grammar_parse
 }
