@@ -15,4 +15,4 @@ jobs:
     - uses: actions/setup-node@v4
       with:
         node-version: '22'
-    - run: npx -y angelonuffer/0#19330c4 tests/0 | node
+    - run: npx -y angelonuffer/0#8cbab42 tests/0 | node
