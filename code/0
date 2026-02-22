@@ -1,4 +1,4 @@
-dialect = https://cdn.jsdelivr.net/gh/angelonuffer/dialect@d37c62e/code/0
+dialect = @ "https://cdn.jsdelivr.net/gh/angelonuffer/dialect@d37c62e/code/0"
 
 // --- Independent Rules (No whitespace dependency) ---
 
@@ -8,7 +8,7 @@ newline_chars = {
   options: [
     { type: "symbol" text: "
 " }
-    { type: "symbol" text: "\r" }
+    { type: "symbol" text: "" }
   ]
 }
 
@@ -163,53 +163,38 @@ char_class_item = {
     {
       type: "sequence"
       parts: [
-        { name: "backslash" grammar: { type: "symbol" text: "\\" } }
-        { name: "char" grammar: { type: "range" from: " " to: "~" } }
+        { type: "symbol" text: "\\" }
+        { type: "range" from: " " to: "~" }
       ]
-      format: "object"
+      format: "list"
     }
     {
       type: "sequence"
       parts: [
         {
-          name: "from"
-          grammar: {
-            type: "alternative"
-            options: [
-              { type: "range" from: " " to: "\\" }
-              { type: "range" from: "^" to: "~" }
-            ]
-          }
+          type: "alternative"
+          options: [
+            { type: "range" from: " " to: "\\" }
+            { type: "range" from: "^" to: "~" }
+          ]
         }
-        { name: "dash" grammar: { type: "symbol" text: "-" } }
+        { type: "symbol" text: "-" }
         {
-          name: "to"
-          grammar: {
-            type: "alternative"
-            options: [
-              { type: "range" from: " " to: "\\" }
-              { type: "range" from: "^" to: "~" }
-            ]
-          }
+          type: "alternative"
+          options: [
+            { type: "range" from: " " to: "\\" }
+            { type: "range" from: "^" to: "~" }
+          ]
         }
       ]
-      format: "object"
+      format: "list"
     }
     {
-      type: "sequence"
-      parts: [
-        {
-          name: "char"
-          grammar: {
-            type: "alternative"
-            options: [
-              { type: "range" from: " " to: "\\" }
-              { type: "range" from: "^" to: "~" }
-            ]
-          }
-        }
+      type: "alternative"
+      options: [
+        { type: "range" from: " " to: "\\" }
+        { type: "range" from: "^" to: "~" }
       ]
-      format: "object"
     }
   ]
 }
@@ -380,13 +365,32 @@ make_antlr_grammar = { ws_char } => (
 
   // --- Level 0 Grammar (No nested groups) ---
 
-  rule_element_0 = {
+  rule_element_base_0 = {
     type: "alternative"
     options: [
       string_literal
       char_class
       { type: "symbol" text: "." }
       identifier
+    ]
+  }
+
+  rule_element_0 = {
+    type: "alternative"
+    options: [
+      { type: "sequence" parts: [
+        { name: "open" grammar: { type: "symbol" text: "~" } }
+        { name: "ws" grammar: opt_ws }
+        { name: "element" grammar: rule_element_base_0 }
+      ] format: "object" }
+      { type: "sequence" parts: [
+        { name: "from" grammar: rule_element_base_0 }
+        { name: "ws1" grammar: opt_ws }
+        { name: "open" grammar: { type: "symbol" text: ".." } }
+        { name: "ws2" grammar: opt_ws }
+        { name: "to" grammar: rule_element_base_0 }
+      ] format: "object" }
+      rule_element_base_0
     ]
   }
 
@@ -414,7 +418,7 @@ make_antlr_grammar = { ws_char } => (
         grammar: {
           type: "sequence"
           parts: [
-            { name: "ws" grammar: ws }
+            { name: "ws" grammar: opt_ws }
             { name: "element" grammar: element_with_quantifier_0 }
           ]
           format: "object"
@@ -463,7 +467,7 @@ make_antlr_grammar = { ws_char } => (
     format: "object"
   }
 
-  rule_element_1 = {
+  rule_element_base_1 = {
     type: "alternative"
     options: [
       string_literal
@@ -471,6 +475,25 @@ make_antlr_grammar = { ws_char } => (
       { type: "symbol" text: "." }
       group_1
       identifier
+    ]
+  }
+
+  rule_element_1 = {
+    type: "alternative"
+    options: [
+      { type: "sequence" parts: [
+        { name: "open" grammar: { type: "symbol" text: "~" } }
+        { name: "ws" grammar: opt_ws }
+        { name: "element" grammar: rule_element_base_1 }
+      ] format: "object" }
+      { type: "sequence" parts: [
+        { name: "from" grammar: rule_element_base_1 }
+        { name: "ws1" grammar: opt_ws }
+        { name: "open" grammar: { type: "symbol" text: ".." } }
+        { name: "ws2" grammar: opt_ws }
+        { name: "to" grammar: rule_element_base_1 }
+      ] format: "object" }
+      rule_element_base_1
     ]
   }
 
@@ -498,7 +521,7 @@ make_antlr_grammar = { ws_char } => (
         grammar: {
           type: "sequence"
           parts: [
-            { name: "ws" grammar: ws }
+            { name: "ws" grammar: opt_ws }
             { name: "element" grammar: element_with_quantifier_1 }
           ]
           format: "object"
@@ -547,7 +570,7 @@ make_antlr_grammar = { ws_char } => (
     format: "object"
   }
 
-  rule_element_2 = {
+  rule_element_base_2 = {
     type: "alternative"
     options: [
       string_literal
@@ -555,6 +578,25 @@ make_antlr_grammar = { ws_char } => (
       { type: "symbol" text: "." }
       group_2
       identifier
+    ]
+  }
+
+  rule_element_2 = {
+    type: "alternative"
+    options: [
+      { type: "sequence" parts: [
+        { name: "open" grammar: { type: "symbol" text: "~" } }
+        { name: "ws" grammar: opt_ws }
+        { name: "element" grammar: rule_element_base_2 }
+      ] format: "object" }
+      { type: "sequence" parts: [
+        { name: "from" grammar: rule_element_base_2 }
+        { name: "ws1" grammar: opt_ws }
+        { name: "open" grammar: { type: "symbol" text: ".." } }
+        { name: "ws2" grammar: opt_ws }
+        { name: "to" grammar: rule_element_base_2 }
+      ] format: "object" }
+      rule_element_base_2
     ]
   }
 
@@ -582,7 +624,7 @@ make_antlr_grammar = { ws_char } => (
         grammar: {
           type: "sequence"
           parts: [
-            { name: "ws" grammar: ws }
+            { name: "ws" grammar: opt_ws }
             { name: "element" grammar: element_with_quantifier_2 }
           ]
           format: "object"
@@ -646,7 +688,7 @@ make_antlr_grammar = { ws_char } => (
           type: "sequence"
           parts: [
             { name: "keyword" grammar: { type: "symbol" text: "fragment" } }
-            { name: "ws" grammar: ws }
+            { name: "ws" grammar: opt_ws }
           ]
           format: "object"
         }
@@ -778,10 +820,10 @@ ws_char_base = {
   type: "alternative"
   options: [
     { type: "symbol" text: " " }
-    { type: "symbol" text: "\t" }
+    { type: "symbol" text: "	" }
     { type: "symbol" text: "
 " }
-    { type: "symbol" text: "\r" }
+    { type: "symbol" text: "" }
   ]
 }
 
@@ -789,10 +831,10 @@ ws_char_parse = {
   type: "alternative"
   options: [
     { type: "symbol" text: " " }
-    { type: "symbol" text: "\t" }
+    { type: "symbol" text: "	" }
     { type: "symbol" text: "
 " }
-    { type: "symbol" text: "\r" }
+    { type: "symbol" text: "" }
     comment
   ]
 }
@@ -805,9 +847,10 @@ antlr_grammar_generate = make_antlr_grammar({ ws_char: ws_char_generate })
 // --- to_dialect ---
 
 to_dialect_char_class_item = item =>
-  | (item.dash == "-") = { type: "range" from: item.from to: item.to }
-  | (item.backslash == "\\") = { type: "symbol" text: item.char }
-  | { type: "symbol" text: item.char }
+  | (to_dialect_is_string(item)) = { type: "symbol" text: item }
+  | (item[.] == 3) = { type: "range" from: item[0] to: item[2] }
+  | (item[.] == 2) = { type: "symbol" text: item[1] }
+  | { type: "symbol" text: "unknown" }
 
 to_dialect_char_class = { items index result } =>
   | (index >= items[.]) = { type: "alternative" options: result }
@@ -831,6 +874,8 @@ to_dialect_is_string = val => (val == val + "")
 to_dialect_element = { element convert_body } =>
   | (to_dialect_is_string(element) & element == ".") = { type: "negation" grammar: { type: "symbol" text: "" } }
   | (to_dialect_is_string(element)) = { type: "reference" name: element }
+  | (element.open == "~") = { type: "negation" grammar: to_dialect_element({ element: element.element convert_body: convert_body }) }
+  | (element.open == "..") = { type: "range" from: to_dialect_element({ element: element.from convert_body: convert_body }).text to: to_dialect_element({ element: element.to convert_body: convert_body }).text }
   | (element.open == "(") = convert_body(element.body)
   | (element.open == "'") = { type: "symbol" text: element.content }
   | (element.open == "[") = to_dialect_char_class({ items: element.content index: 0 result: [] })

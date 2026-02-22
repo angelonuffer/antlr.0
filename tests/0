@@ -1,5 +1,10 @@
-antlr = ../code/0
-unitest = unitest.0
+antlr = @ "../code/0"
+unitest = @ "unitest.0"
+repro_issue_6 = @ "repro_issue_6.0"
+test_alts = @ "test_alts.0"
+test_lexer = @ "test_lexer.0"
+test_mode = @ "test_mode.0"
+test_to_dialect = @ "test_to_dialect.0"
 
 // Test 1: Parse a simple grammar declaration
 test_input = "grammar Test;"
