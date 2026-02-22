@@ -1,0 +1,36 @@
+antlr = ../code/0
+unitest = unitest.0
+
+test_input = "grammar T;
+r: 'a' | b+;
+b: [a-z] ( 'x' | 'y' )? ;"
+
+result = antlr.parse({ input: test_input })
+dialect_grammar = antlr.to_dialect({ ast: result.value })
+
+unitest.describe({
+  name: "to_dialect Test"
+  tests: [
+    unitest.equals([ result.success 1 ])
+    unitest.equals([ dialect_grammar.r.type "alternative" ])
+    unitest.equals([ dialect_grammar.r.options[0].type "symbol" ])
+    unitest.equals([ dialect_grammar.r.options[0].text "a" ])
+    unitest.equals([ dialect_grammar.r.options[1].type "repetition" ])
+    unitest.equals([ dialect_grammar.r.options[1].minimum 1 ])
+    unitest.equals([ dialect_grammar.r.options[1].grammar.type "reference" ])
+    unitest.equals([ dialect_grammar.r.options[1].grammar.name "b" ])
+
+    unitest.equals([ dialect_grammar.b.type "sequence" ])
+    unitest.equals([ dialect_grammar.b.parts[0].type "alternative" ])
+    unitest.equals([ dialect_grammar.b.parts[0].options[0].type "range" ])
+    unitest.equals([ dialect_grammar.b.parts[0].options[0].from "a" ])
+    unitest.equals([ dialect_grammar.b.parts[0].options[0].to "z" ])
+
+    unitest.equals([ dialect_grammar.b.parts[1].type "repetition" ])
+    unitest.equals([ dialect_grammar.b.parts[1].minimum 0 ])
+    unitest.equals([ dialect_grammar.b.parts[1].maximum 1 ])
+    unitest.equals([ dialect_grammar.b.parts[1].grammar.type "alternative" ])
+    unitest.equals([ dialect_grammar.b.parts[1].grammar.options[0].text "x" ])
+    unitest.equals([ dialect_grammar.b.parts[1].grammar.options[1].text "y" ])
+  ]
+})

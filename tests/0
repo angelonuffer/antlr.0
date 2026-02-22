@@ -272,10 +272,11 @@ expr: 'hello' // middle comment
           ]
         )
       })
-      repro_issue_6.0
-      test_alts.0
-      test_lexer.0
-      test_mode.0
+      repro_issue_6
+      test_alts
+      test_lexer
+      test_mode
+      test_to_dialect
     ]
   })
 )
