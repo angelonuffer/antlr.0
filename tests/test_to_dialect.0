@@ -1,5 +1,5 @@
-antlr = ../code/0
-unitest = unitest.0
+antlr = @ "../code/0"
+unitest = @ "unitest.0"
 
 test_input = "grammar T;
 r: 'a' | b+;
